@@ -67,8 +67,8 @@ const STATE_MAP_VALUE = "map_value";
 
 type MapKeyType = string | number;
 
-const isValidMapKeyType = (key: unknown): key is MapKeyType => {
-  return typeof key === "string" || typeof key === "number";
+const isValidMapKeyType = (key: unknown): key is (MapKeyType | Uint8Array) => {
+  return typeof key === "string" || typeof key === "number" || (typeof key === 'object' && key instanceof Uint8Array);
 };
 
 type StackMapState = {
@@ -281,6 +281,10 @@ export class Decoder<ContextType = undefined> {
     }
   }
 
+  private static convertUint8ArrayToHex(value: Uint8Array): string {
+    return Array.from(value, byte => ('0' + (byte & 0xFF).toString(16)).slice(-2)).join('');
+  }
+
   private doDecodeSync(): unknown {
     DECODE: while (true) {
       const headByte = this.readHeadByte();
@@ -483,7 +487,7 @@ export class Decoder<ContextType = undefined> {
             throw new DecodeError("The key __proto__ is not allowed");
           }
 
-          state.key = object;
+          state.key = typeof object === 'object' ? Decoder.convertUint8ArrayToHex(object) : object;
           state.type = STATE_MAP_VALUE;
           continue DECODE;
         } else {
